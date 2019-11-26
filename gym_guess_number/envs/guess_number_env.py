@@ -76,8 +76,9 @@ class GuessNumberEnv(gym.Env):
         self.target_number = random.randint(0, self.MAX_NUMBER)
         self.is_over = False
         self.info = {'t': self.target_number, 'a': []}
-        self.last_observation = [Observation.NONE]
-        return self.last_observation
+        self.observation = [Observation.NONE]
+        logging.debug("reset() -> {}".format((self.observation, None, None, self.info)))
+        return self.observation
 
     def step(self, action):
         """
@@ -95,31 +96,37 @@ class GuessNumberEnv(gym.Env):
         if self.is_over:
             raise RuntimeError("Episode is done")
 
+        self.info['a'].append(action)
+
+        # Current observation
+        prev_observation = self.observation[0]
+        if action < self.target_number:
+            self.observation = [Observation.HIGHER]
+        elif action > self.target_number:
+            self.observation = [Observation.LOWER]
+        else:
+            self.observation = [Observation.CORRECT]
+
         # Is the episode over?
         self.steps_remaining -= 1
         if self.steps_remaining == 0 or action == self.target_number:
             self.is_over = True
             reward = -abs(action-self.target_number)    # Reward is negative distance from last action
+        elif prev_observation == Observation.NONE:
+            # If it's the first try reward is 0
+            reward = 0.0
         else:
-            # Positive reward if it correctly reacts to Higher/Lower
-            if ((self.last_observation[0] == Observation.HIGHER and action > self.info['a'][-1]) or
-                (self.last_observation[0] == Observation.LOWER and action < self.info['a'][-1])):
+            # We already gave it a Lower/Higher hint - did respond correctly?
+            prev_action = self.info['a'][-2]
+            if ((prev_observation == Observation.HIGHER and action > prev_action) or
+                (prev_observation == Observation.LOWER and action < prev_action)):
+                # Yes it understands Lower/Higher
                 reward = 0.5
             else:
                 reward = -0.5
 
-        self.info['a'].append(action)
-
-        # Return the observation
-        if action < self.target_number:
-            self.last_observation = [Observation.HIGHER]
-        elif action > self.target_number:
-            self.last_observation = [Observation.LOWER]
-        else:
-            self.last_observation = [Observation.CORRECT]
-
-        ret = (self.last_observation, reward, self.is_over, self.info)
-        logging.debug(ret)
+        ret = (self.observation, reward, self.is_over, self.info)
+        logging.debug("step({}) -> {}".format(action, ret))
         return ret
 
     def render(self, mode='human'):
