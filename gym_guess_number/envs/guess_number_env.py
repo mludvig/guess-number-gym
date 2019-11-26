@@ -76,7 +76,8 @@ class GuessNumberEnv(gym.Env):
         self.target_number = random.randint(0, self.MAX_NUMBER)
         self.is_over = False
         self.info = {'t': self.target_number, 'a': []}
-        return [ Observation.NONE ]
+        self.last_observation = [Observation.NONE]
+        return self.last_observation
 
     def step(self, action):
         """
@@ -94,25 +95,30 @@ class GuessNumberEnv(gym.Env):
         if self.is_over:
             raise RuntimeError("Episode is done")
 
-        self.info['a'].append(action)
-
         # Is the episode over?
         self.steps_remaining -= 1
         if self.steps_remaining == 0 or action == self.target_number:
             self.is_over = True
             reward = -abs(action-self.target_number)    # Reward is negative distance from last action
         else:
-            reward = -0.1  # Don't give real reward until the last step
+            # Positive reward if it correctly reacts to Higher/Lower
+            if ((self.last_observation[0] == Observation.HIGHER and action > self.info['a'][-1]) or
+                (self.last_observation[0] == Observation.LOWER and action < self.info['a'][-1])):
+                reward = 0.5
+            else:
+                reward = -0.5
+
+        self.info['a'].append(action)
 
         # Return the observation
         if action < self.target_number:
-            ob = [Observation.HIGHER]
+            self.last_observation = [Observation.HIGHER]
         elif action > self.target_number:
-            ob = [Observation.LOWER]
+            self.last_observation = [Observation.LOWER]
         else:
-            ob = [Observation.CORRECT]
+            self.last_observation = [Observation.CORRECT]
 
-        ret = (ob, reward, self.is_over, self.info)
+        ret = (self.last_observation, reward, self.is_over, self.info)
         logging.debug(ret)
         return ret
 
