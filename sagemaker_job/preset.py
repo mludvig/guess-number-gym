@@ -18,7 +18,7 @@ env_params = GymVectorEnvironment(level='GuessNumber-v0')
 ####################
 # Graph Scheduling #
 ####################
-training_steps = 20000
+training_steps = 200000
 schedule_params = ScheduleParameters()
 schedule_params.improve_steps = TrainingSteps(training_steps)
 schedule_params.steps_between_evaluation_periods = EnvironmentEpisodes(100)

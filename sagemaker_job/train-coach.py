@@ -17,7 +17,8 @@ class Launcher(SageMakerCoachPresetLauncher):
         mapping = {
                       "discount": "rl.agent_params.algorithm.discount",
                       "evaluation_episodes": "rl.evaluation_steps:EnvironmentEpisodes",
-                      "improve_steps": "rl.improve_steps:TrainingSteps"
+                      "improve_steps": "rl.improve_steps:TrainingSteps",
+                      "learning_rate": "rl.agent_params.network_wrappers['main'].learning_rate",
                   }
         if name in mapping:
             self.apply_hyperparameter(mapping[name], value)
