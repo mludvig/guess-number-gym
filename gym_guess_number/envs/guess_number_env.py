@@ -73,7 +73,12 @@ class GuessNumberEnv(gym.Env):
         # Give it enough tries to guess correctly with the right strategy
         # that is by halving the interval each time.
         self.steps_remaining = int(math.log2(self.MAX_NUMBER)) + 1
+
         self.target_number = random.randint(0, self.MAX_NUMBER)
+
+        # Interval where the action should fall for extra reward - updated at every step
+        self.interval = [ 0, self.MAX_NUMBER ]
+
         self.is_over = False
         self.info = {'t': self.target_number, 'a': []}
         self.observation = [Observation.NONE]
@@ -102,10 +107,14 @@ class GuessNumberEnv(gym.Env):
         prev_observation = self.observation[0]
         if action < self.target_number:
             self.observation = [Observation.HIGHER]
+            self.interval[0] = max(action, self.interval[0])          # update lower bound - target is higher
         elif action > self.target_number:
             self.observation = [Observation.LOWER]
+            self.interval[1] = min(action, self.interval[1])          # update upper bound - target is lower
         else:
             self.observation = [Observation.CORRECT]
+
+        self.info['i'] = self.interval
 
         # Is the episode over?
         self.steps_remaining -= 1
@@ -121,7 +130,12 @@ class GuessNumberEnv(gym.Env):
             if ((prev_observation == Observation.HIGHER and action > prev_action) or
                 (prev_observation == Observation.LOWER and action < prev_action)):
                 # Yes it understands Lower/Higher
-                reward = 0.5
+                reward = 0.1
+
+                # Did it guess from the correct interval?
+                if action in range(self.interval[0], self.interval[1]+1):
+                    # Yes, much higher reward
+                    reward = 0.5
             else:
                 reward = -0.5
 
